@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FlowerGarden 🌸</title>
+
+  <!-- Google Font: Dancing Script cho chữ mềm mại -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       RESET & BASE STYLES
+       ============================================================ */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;      /* Bỏ highlight khi chạm trên mobile */
+    }
+
+    body {
+      /* Nền bầu trời đêm gradient mềm mại */
+      background: linear-gradient(
+        170deg,
+        #020111 0%,
+        #060620 20%,
+        #0a0a2e 40%,
+        #10103a 60%,
+        #0d1b2a 80%,
+        #1b2838 100%
+      );
+      font-family: 'Cormorant Garamond', 'Georgia', serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* ============================================================
+       TẦNG NỀN: SAO LẤNG LÁNH
+       ============================================================ */
+    #stars-container {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: #fff;
+      animation: twinkle var(--twinkle-dur, 3s) ease-in-out infinite alternate;
+      opacity: 0;
+    }
+
+    @keyframes twinkle {
+      0%   { opacity: 0.1; transform: scale(0.8); }
+      100% { opacity: var(--max-opacity, 0.8); transform: scale(1.2); }
+    }
+
+    /* Hiệu ứng mặt đất (gradient nhẹ ở đáy) */
+    .ground {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: linear-gradient(to top, rgba(15, 40, 15, 0.6), transparent);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* ============================================================
+       TRẠNG THÁI 1: MÀN HÌNH KHỞI ĐẦU
+       ============================================================ */
+
+    /* --- Bọc toàn bộ cây hoa (flower + stem), neo ở đáy màn hình --- */
+    #plant-wrapper {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Con bên trong chịu hiệu ứng đung đưa */
+    .plant-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transform-origin: bottom center;
+      animation: sway 5s ease-in-out infinite;
+      will-change: transform;
+    }
+
+    /* ---- Hiệu ứng đung đưa theo gió ---- */
+    @keyframes sway {
+      0%   { transform: rotate(0deg); }
+      20%  { transform: rotate(1.8deg); }
+      40%  { transform: rotate(-1.2deg); }
+      60%  { transform: rotate(2deg); }
+      80%  { transform: rotate(-0.8deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    /* ---- Bông hoa hồng (ảnh) ---- */
+    .flower-image {
+      width: clamp(140px, 28vmin, 280px);
+      height: auto;
+      cursor: pointer;
+      position: relative;
+      z-index: 12;
+      /* Hiệu ứng bóng hồng xung quanh */
+      filter: drop-shadow(0 0 18px rgba(255, 120, 160, 0.5))
+              drop-shadow(0 0 40px rgba(255, 80, 130, 0.25));
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  filter 0.35s ease;
+      /* Đẩy hoa lên trên, chồng lên thân một chút */
+      margin-bottom: -15px;
+    }
+
+    .flower-image:hover {
+      transform: scale(1.1);
+      filter: drop-shadow(0 0 25px rgba(255, 120, 160, 0.7))
+              drop-shadow(0 0 50px rgba(255, 80, 130, 0.4));
+    }
+
+    .flower-image:active {
+      transform: scale(0.96);
+    }
+
+    /* ---- Tooltip nhấp nháy "Chạm vào tôi" ---- */
+    .tap-hint {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Dancing Script', cursive;
+      font-size: 14px;
+      color: rgba(255, 200, 220, 0.8);
+      white-space: nowrap;
+      animation: hintPulse 2s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 13;
+    }
+
+    @keyframes hintPulse {
+      0%, 100% { opacity: 0.4; transform: translateX(-50%) translateY(0); }
+      50%      { opacity: 1;   transform: translateX(-50%) translateY(-5px); }
+    }
+
+    /* ---- Thân cây (CSS vẽ) ---- */
+    .stem-section {
+      position: relative;
+      width: 7px;
+      height: clamp(180px, 40vh, 400px);
+      background: linear-gradient(
+        to bottom,
+        #4a8c3f 0%,
+        #3a7a30 30%,
+        #2d6b20 60%,
+        #1e4a15 100%
+      );
+      border-radius: 4px;
+      transition: opacity 1s ease;
+    }
+
+    /* Đường gân thân cây (vệt sáng dọc) */
+    .stem-section::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 2px;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(to bottom,
+        rgba(120, 200, 100, 0.4),
+        rgba(80, 160, 60, 0.1)
+      );
+      border-radius: 2px;
+    }
+
+    /* ---- Lá cây trên thân ---- */
+    .leaf {
+      position: absolute;
+      width: clamp(28px, 5vmin, 45px);
+      height: clamp(14px, 2.5vmin, 22px);
+      border-radius: 0 70% 0 70%;
+      box-shadow: inset -2px -2px 4px rgba(0, 0, 0, 0.15),
+                  inset 2px 2px 4px rgba(100, 200, 80, 0.2);
+    }
+
+    /* Gân lá (đường giữa) */
+    .leaf::after {
+      content: '';
+      position: absolute;
+      width: 80%;
+      height: 1px;
+      background: rgba(20, 60, 10, 0.3);
+      top: 50%;
+      left: 10%;
+      transform: rotate(-8deg);
+    }
+
+    /* Lá 1 – bên trái, gần đỉnh thân */
+    .leaf-1 {
+      background: linear-gradient(135deg, #5db84a, #3a8a28);
+      top: 15%;
+      left: -22px;
+      transform: rotate(-35deg);
+    }
+
+    /* Lá 2 – bên phải, giữa thân */
+    .leaf-2 {
+      background: linear-gradient(135deg, #4caf50, #2e7d32);
+      top: 45%;
+      right: -22px;
+      left: auto;
+      transform: rotate(35deg) scaleX(-1);
+      border-radius: 70% 0 70% 0;
+    }
+
+    /* Lá 3 – bên trái, dưới thân */
+    .leaf-3 {
+      background: linear-gradient(135deg, #43a047, #2a6d1e);
+      top: 72%;
+      left: -18px;
+      transform: rotate(-25deg) scale(0.85);
+    }
+
+    /* ---- Dòng chữ phát sáng nhẹ ---- */
+    #message-text {
+      position: fixed;
+      bottom: clamp(30px, 8vh, 80px);
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Dancing Script', cursive;
+      font-size: clamp(16px, 3.5vmin, 28px);
+      font-weight: 600;
+      color: #fce4ec;
+      text-align: center;
+      width: 90%;
+      max-width: 600px;
+      z-index: 10;
+      /* Hiệu ứng phát sáng */
+      text-shadow:
+        0 0 10px rgba(255, 180, 200, 0.6),
+        0 0 20px rgba(255, 150, 180, 0.4),
+        0 0 40px rgba(255, 100, 150, 0.2);
+      animation: textGlow 3s ease-in-out infinite alternate;
+      transition: opacity 1s ease;
+      line-height: 1.6;
+    }
+
+    @keyframes textGlow {
+      0%   {
+        text-shadow:
+          0 0 8px rgba(255, 180, 200, 0.4),
+          0 0 18px rgba(255, 150, 180, 0.25),
+          0 0 35px rgba(255, 100, 150, 0.1);
+      }
+      100% {
+        text-shadow:
+          0 0 15px rgba(255, 200, 220, 0.8),
+          0 0 30px rgba(255, 160, 190, 0.5),
+          0 0 60px rgba(255, 120, 160, 0.3);
+      }
+    }
+
+    /* ============================================================
+       CLASS TIỆN ÍCH: FADE OUT / IN
+       ============================================================ */
+    .fade-out {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* ============================================================
+       TRẠNG THÁI 2: VƯỜN HOA NỞ RỘ
+       ============================================================ */
+    #garden-container {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    /* Mỗi bông hoa trong vườn */
+    .garden-flower {
+      position: absolute;
+      bottom: 0;
+      opacity: 0;
+      will-change: transform, opacity;
+      animation: growUp var(--dur, 2s) var(--delay, 0s) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      /* Mỗi bông có thân nhỏ phía dưới */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Biểu tượng hoa (emoji) */
+    .garden-flower .flower-emoji {
+      font-size: var(--size, 36px);
+      display: block;
+      transform: rotate(var(--rot, 0deg));
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+    }
+
+    /* Thân nhỏ của hoa vườn */
+    .garden-flower .mini-stem {
+      width: 3px;
+      height: var(--stem-h, 40px);
+      background: linear-gradient(to bottom, #4a9e3a, #2d6b20);
+      border-radius: 2px;
+      margin-top: -2px;
+    }
+
+    /* Lá nhỏ trên thân hoa vườn */
+    .garden-flower .mini-leaf {
+      position: absolute;
+      width: 14px;
+      height: 7px;
+      background: #43a047;
+      border-radius: 0 60% 0 60%;
+      bottom: var(--leaf-y, 30%);
+    }
+    .garden-flower .mini-leaf.left  { left: -10px; transform: rotate(-30deg); }
+    .garden-flower .mini-leaf.right { right: -10px; transform: rotate(30deg) scaleX(-1); border-radius: 60% 0 60% 0; }
+
+    @keyframes growUp {
+      0% {
+        transform: translateY(60px) scale(0.2);
+        opacity: 0;
+      }
+      30% {
+        opacity: 0.8;
+      }
+      100% {
+        transform: translateY(var(--rise, -200px)) scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* Hiệu ứng đung đưa nhẹ cho hoa vườn sau khi mọc xong */
+    .garden-flower.grown {
+      animation: gardenSway 4s ease-in-out infinite;
+      animation-delay: var(--sway-delay, 0s);
+    }
+
+    @keyframes gardenSway {
+      0%, 100% { transform: translateY(var(--rise, -200px)) rotate(0deg); }
+      50%      { transform: translateY(var(--rise, -200px)) rotate(var(--sway-angle, 3deg)); }
+    }
+
+    /* ============================================================
+       TRẠNG THÁI 3: THIỆP CHÚC MỪNG
+       ============================================================ */
+
+    /* Lớp phủ mờ toàn màn hình */
+    #card-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* Mặc định ẩn */
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.8s ease;
+    }
+
+    #card-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Nền blur phía sau thiệp */
+    .card-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(5, 5, 20, 0.45);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    /* ---- Tấm thiệp ---- */
+    .greeting-card {
+      position: relative;
+      background: linear-gradient(
+        145deg,
+        #fffaf5 0%,
+        #fff5f8 30%,
+        #fff0f5 60%,
+        #fef0f5 100%
+      );
+      border-radius: 24px;
+      padding: clamp(28px, 5vmin, 48px);
+      max-width: 520px;
+      width: 88%;
+      box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.35),
+        0 0 0 1px rgba(255, 200, 220, 0.3),
+        0 0 60px rgba(255, 150, 180, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      text-align: center;
+      /* Animation xuất hiện */
+      transform: scale(0.6) translateY(40px);
+      transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  opacity 0.5s ease;
+      overflow: hidden;
+    }
+
+    #card-overlay.visible .greeting-card {
+      transform: scale(1) translateY(0);
+    }
+
+    /* Viền trang trí trên cùng của thiệp */
+    .greeting-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: linear-gradient(90deg,
+        #f8bbd0, #f48fb1, #ec407a, #f48fb1, #f8bbd0
+      );
+      border-radius: 24px 24px 0 0;
+    }
+
+    /* Hoa trang trí góc thiệp */
+    .card-ornament {
+      position: absolute;
+      font-size: clamp(22px, 4vmin, 36px);
+      opacity: 0.5;
+      color: #e91e63;
+    }
+    .card-ornament.top-left   { top: 12px; left: 16px; transform: rotate(-15deg); }
+    .card-ornament.top-right  { top: 12px; right: 16px; transform: rotate(15deg); }
+    .card-ornament.bot-left   { bottom: 12px; left: 16px; transform: rotate(15deg); }
+    .card-ornament.bot-right  { bottom: 12px; right: 16px; transform: rotate(-15deg); }
+
+    /* Tiêu đề thiệp */
+    .card-title {
+      font-family: 'Dancing Script', cursive;
+      font-size: clamp(22px, 5vmin, 34px);
+      font-weight: 700;
+      color: #c2185b;
+      margin-bottom: 16px;
+      letter-spacing: 1px;
+    }
+
+    /* Đường kẻ trang trí */
+    .card-divider {
+      width: 60%;
+      height: 1px;
+      margin: 16px auto;
+      background: linear-gradient(90deg,
+        transparent,
+        rgba(233, 30, 99, 0.3),
+        rgba(233, 30, 99, 0.5),
+        rgba(233, 30, 99, 0.3),
+        transparent
+      );
+    }
+
+    /* Nội dung lời chúc */
+    .card-message {
+      font-family: 'Cormorant Garamond', 'Georgia', serif;
+      font-size: clamp(16px, 3vmin, 22px);
+      font-weight: 400;
+      color: #4a2040;
+      line-height: 1.8;
+      padding: 0 10px;
+    }
+
+    /* ---- Nút Chơi lại ---- */
+    .replay-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 12px 32px;
+      font-family: 'Dancing Script', cursive;
+      font-size: clamp(16px, 3vmin, 22px);
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #ec407a, #e91e63, #c2185b);
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow:
+        0 6px 20px rgba(233, 30, 99, 0.35),
+        0 2px 6px rgba(0, 0, 0, 0.15);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      letter-spacing: 0.5px;
+    }
+
+    .replay-btn:hover {
+      transform: translateY(-2px) scale(1.04);
+      box-shadow:
+        0 10px 30px rgba(233, 30, 99, 0.45),
+        0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .replay-btn:active {
+      transform: translateY(1px) scale(0.97);
+      box-shadow:
+        0 3px 10px rgba(233, 30, 99, 0.3);
+    }
+
+    /* ============================================================
+       HIỆU ỨNG HẠT SÁNG (SPARKLE) KHI CHẠM HOA
+       ============================================================ */
+    .sparkle {
+      position: fixed;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 15;
+      animation: sparkleAnim var(--sparkle-dur, 1s) ease-out forwards;
+    }
+
+    @keyframes sparkleAnim {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(var(--sx, 50px), var(--sy, -80px)) scale(0);
+      }
+    }
+
+    /* ============================================================
+       RESPONSIVE: ĐIỀU CHỈNH CHO MOBILE
+       ============================================================ */
+    @media (max-width: 480px) {
+      .flower-image {
+        margin-bottom: -10px;
+      }
+
+      .stem-section {
+        width: 5px;
+      }
+
+      .leaf {
+        width: 24px;
+        height: 12px;
+      }
+
+      .leaf-1 { left: -18px; }
+      .leaf-2 { right: -18px; }
+      .leaf-3 { left: -14px; }
+
+      .greeting-card {
+        padding: 24px 18px;
+        border-radius: 18px;
+      }
+
+      .card-ornament {
+        font-size: 18px;
+      }
+    }
+
+    /* Landscape mobile */
+    @media (max-height: 500px) {
+      .stem-section {
+        height: 25vh;
+      }
+
+      #message-text {
+        bottom: 10px;
+        font-size: 14px;
+      }
+
+      .greeting-card {
+        padding: 16px;
+        max-width: 420px;
+      }
+
+      .card-title { font-size: 20px; margin-bottom: 8px; }
+      .card-message { font-size: 14px; line-height: 1.5; }
+      .card-divider { margin: 8px auto; }
+      .replay-btn { padding: 8px 24px; font-size: 16px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ============================================================
+       TẦNG 0: NỀN SAO LẤNG LÁNH
+       ============================================================ -->
+  <div id="stars-container" aria-hidden="true"></div>
+  <div class="ground" aria-hidden="true"></div>
+
+  <!-- ============================================================
+       TRẠNG THÁI 1: BÔNG HOA HỒNG + THÂN CÂY + LỜI NHẮN
+       ============================================================ -->
+  <div id="plant-wrapper">
+    <div class="plant-inner" id="plant-inner">
+
+      <!-- Bông hoa chính (ảnh PNG trong suốt) -->
+      <div style="position: relative; display: inline-block;">
+        <span class="tap-hint" id="tap-hint">✨ Chạm vào tôi ✨</span>
+        <img
+          class="flower-image"
+          id="main-flower"
+          src="—Pngtree—pink rose flower_5640168.png"
+          alt="Bông hoa hồng – Chạm để mở vườn hoa"
+          draggable="false"
+        >
+      </div>
+
+      <!-- Thân cây (CSS vẽ) với 3 lá -->
+      <div class="stem-section" id="stem-section">
+        <div class="leaf leaf-1"></div>
+        <div class="leaf leaf-2"></div>
+        <div class="leaf leaf-3"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Dòng chữ phát sáng -->
+  <p id="message-text">Từ một bông hoa nhỏ, chạm vào điều tốt lành sẽ tới</p>
+
+  <!-- ============================================================
+       TRẠNG THÁI 2: VƯỜN HOA (container rỗng, JS sẽ thêm hoa)
+       ============================================================ -->
+  <div id="garden-container"></div>
+
+  <!-- ============================================================
+       TRẠNG THÁI 3: THIỆP CHÚC MỪNG
+       ============================================================ -->
+  <div id="card-overlay">
+    <div class="card-backdrop"></div>
+    <div class="greeting-card">
+      <!-- Trang trí 4 góc -->
+      <span class="card-ornament top-left">❀</span>
+      <span class="card-ornament top-right">❀</span>
+      <span class="card-ornament bot-left">✿</span>
+      <span class="card-ornament bot-right">✿</span>
+
+      <h2 class="card-title">🌸 Lời Chúc Tốt Đẹp 🌸</h2>
+      <div class="card-divider"></div>
+
+      <p class="card-message">
+        Chúc bạn mỗi ngày đều rực rỡ và ngát hương
+        như những đóa hoa này.
+        <br><br>
+        Luôn bình an và hạnh phúc nhé! 💝
+      </p>
+
+      <div class="card-divider"></div>
+      <button class="replay-btn" id="replay-btn"> Chơi lại</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       JAVASCRIPT: LOGIC ĐIỀU KHIỂN 3 TRẠNG THÁI
+       ============================================================ -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ----------------------------------------------------------
+         THAM CHIẾU ĐẾN CÁC PHẦN TỬ DOM
+         ---------------------------------------------------------- */
+      const mainFlower    = document.getElementById('main-flower');
+      const tapHint       = document.getElementById('tap-hint');
+      const plantInner    = document.getElementById('plant-inner');
+      const stemSection   = document.getElementById('stem-section');
+      const messageText   = document.getElementById('message-text');
+      const gardenBox     = document.getElementById('garden-container');
+      const cardOverlay   = document.getElementById('card-overlay');
+      const replayBtn     = document.getElementById('replay-btn');
+      const starsBox      = document.getElementById('stars-container');
+
+      /* Quản lý trạng thái */
+      let currentState = 1;             // 1: Khởi đầu | 2: Vườn nở | 3: Thiệp
+      let gardenTimers = [];            // Lưu setTimeout để clear khi replay
+
+      /* ----------------------------------------------------------
+         KHỞI TẠO: TẠO SAO NỀN
+         ---------------------------------------------------------- */
+      function createStars() {
+        const count = Math.min(120, Math.floor(window.innerWidth * window.innerHeight / 6000));
+        const frag = document.createDocumentFragment();
+
+        for (let i = 0; i < count; i++) {
+          const star = document.createElement('div');
+          star.className = 'star';
+          const size = 1 + Math.random() * 2.5;
+          star.style.cssText = `
+            left: ${Math.random() * 100}%;
+            top: ${Math.random() * 100}%;
+            width: ${size}px;
+            height: ${size}px;
+            --twinkle-dur: ${2 + Math.random() * 4}s;
+            --max-opacity: ${0.3 + Math.random() * 0.6};
+            animation-delay: ${Math.random() * 5}s;
+          `;
+          frag.appendChild(star);
+        }
+        starsBox.appendChild(frag);
+      }
+
+      createStars();
+
+      /* ----------------------------------------------------------
+         HIỆU ỨNG SPARKLE: hạt sáng bay ra khi chạm hoa
+         ---------------------------------------------------------- */
+      function emitSparkles(x, y) {
+        const colors = ['#ff8a80', '#ff80ab', '#ea80fc', '#ffd54f', '#fff9c4', '#b9f6ca'];
+        for (let i = 0; i < 16; i++) {
+          const spark = document.createElement('div');
+          spark.className = 'sparkle';
+          const angle = Math.random() * Math.PI * 2;
+          const dist  = 40 + Math.random() * 80;
+          spark.style.cssText = `
+            left: ${x}px;
+            top: ${y}px;
+            background: ${colors[Math.floor(Math.random() * colors.length)]};
+            --sx: ${Math.cos(angle) * dist}px;
+            --sy: ${Math.sin(angle) * dist}px;
+            --sparkle-dur: ${0.6 + Math.random() * 0.8}s;
+          `;
+          document.body.appendChild(spark);
+          // Tự xóa sau animation
+          spark.addEventListener('animationend', () => spark.remove());
+        }
+      }
+
+      /* ----------------------------------------------------------
+         TRẠNG THÁI 2: TẠO VƯỜN HOA NỞ RỘ
+         ---------------------------------------------------------- */
+      function spawnGarden() {
+        const flowerTypes = [
+          { emoji: '🌸', weight: 3 },
+          { emoji: '🌺', weight: 2 },
+          { emoji: '🌻', weight: 2 },
+          { emoji: '🌹', weight: 3 },
+          { emoji: '🌷', weight: 3 },
+          { emoji: '🌼', weight: 2 },
+          { emoji: '💮', weight: 1 },
+          { emoji: '🏵️', weight: 1 },
+        ];
+
+        // Tạo mảng emoji có trọng số
+        const pool = [];
+        flowerTypes.forEach(f => {
+          for (let i = 0; i < f.weight; i++) pool.push(f.emoji);
+        });
+
+        // Tính số lượng hoa theo kích thước màn hình
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const count = Math.min(55, Math.max(25, Math.floor((vw * vh) / 18000)));
+
+        const frag = document.createDocumentFragment();
+
+        for (let i = 0; i < count; i++) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'garden-flower';
+
+          // Lấy emoji ngẫu nhiên
+          const emoji = pool[Math.floor(Math.random() * pool.length)];
+
+          // Kích thước ngẫu nhiên
+          const size = 24 + Math.random() * 36;             // 24–60px
+          const stemH = 30 + Math.random() * 60;            // Chiều cao thân nhỏ
+          const rise = -(80 + Math.random() * (vh * 0.65)); // Độ mọc lên
+          const rotation = -25 + Math.random() * 50;        // Góc xoay
+          const xPos = Math.random() * 96 + 2;              // 2–98% chiều ngang
+          const dur = 1.2 + Math.random() * 1.5;            // Thời gian animation
+          const delay = Math.random() * 1.8;                 // Delay ngẫu nhiên
+
+          wrapper.style.cssText = `
+            left: ${xPos}%;
+            --size: ${size}px;
+            --stem-h: ${stemH}px;
+            --rise: ${rise}px;
+            --rot: ${rotation}deg;
+            --dur: ${dur}s;
+            --delay: ${delay}s;
+            --sway-delay: ${Math.random() * 3}s;
+            --sway-angle: ${1.5 + Math.random() * 3}deg;
+          `;
+
+          // Phần hoa (emoji)
+          const flowerEl = document.createElement('span');
+          flowerEl.className = 'flower-emoji';
+          flowerEl.textContent = emoji;
+
+          // Thân nhỏ
+          const stemEl = document.createElement('div');
+          stemEl.className = 'mini-stem';
+
+          // Lá nhỏ (50% cơ hội có lá)
+          if (Math.random() > 0.5) {
+            const leafSide = Math.random() > 0.5 ? 'left' : 'right';
+            const leaf = document.createElement('div');
+            leaf.className = `mini-leaf ${leafSide}`;
+            leaf.style.setProperty('--leaf-y', (20 + Math.random() * 40) + '%');
+            stemEl.appendChild(leaf);
+          }
+
+          wrapper.appendChild(flowerEl);
+          wrapper.appendChild(stemEl);
+          frag.appendChild(wrapper);
+
+          // Sau khi animation mọc xong, thêm class đung đưa
+          const totalTime = (dur + delay) * 1000;
+          const tid = setTimeout(() => {
+            if (wrapper.isConnected) {
+              wrapper.style.animation = 'none'; // Dừng growUp
+              // Force reflow
+              void wrapper.offsetHeight;
+              wrapper.classList.add('grown');
+            }
+          }, totalTime + 100);
+          gardenTimers.push(tid);
+        }
+
+        gardenBox.appendChild(frag);
+
+        // Thêm vài cụm cỏ / lá cây ở đáy
+        const grassEmojis = ['🌿', '🍃', '🌱', '☘️'];
+        for (let i = 0; i < 12; i++) {
+          const grass = document.createElement('div');
+          grass.className = 'garden-flower';
+          const gEmoji = grassEmojis[Math.floor(Math.random() * grassEmojis.length)];
+          const gSize = 18 + Math.random() * 20;
+          const gRise = -(10 + Math.random() * 40);
+
+          grass.style.cssText = `
+            left: ${Math.random() * 100}%;
+            --size: ${gSize}px;
+            --rise: ${gRise}px;
+            --dur: ${0.8 + Math.random() * 1}s;
+            --delay: ${Math.random() * 1}s;
+            --rot: ${-15 + Math.random() * 30}deg;
+          `;
+
+          const gEl = document.createElement('span');
+          gEl.className = 'flower-emoji';
+          gEl.textContent = gEmoji;
+          grass.appendChild(gEl);
+          gardenBox.appendChild(grass);
+        }
+      }
+
+      /* ----------------------------------------------------------
+         XỬ LÝ SỰ KIỆN: CHẠM VÀO BÔNG HOA
+         ---------------------------------------------------------- */
+      function onFlowerTap(e) {
+        if (currentState !== 1) return;
+        currentState = 2;
+
+        // Lấy tọa độ để phát sparkle
+        const rect = mainFlower.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        emitSparkles(cx, cy);
+
+        // Ẩn tooltip
+        tapHint.classList.add('fade-out');
+
+        // Fade out dòng chữ và thân cây
+        messageText.classList.add('fade-out');
+        stemSection.classList.add('fade-out');
+
+        // Dừng đung đưa cây ban đầu
+        plantInner.style.animation = 'none';
+
+        // Hoa chính pulse nhẹ rồi thu nhỏ dần
+        mainFlower.style.transition = 'transform 1.5s ease, opacity 2s ease 1s';
+        mainFlower.style.transform = 'scale(1.15)';
+        mainFlower.style.pointerEvents = 'none';
+
+        setTimeout(() => {
+          mainFlower.style.transform = 'scale(0.7)';
+          mainFlower.style.opacity = '0.5';
+        }, 600);
+
+        // Bắt đầu mọc vườn hoa
+        setTimeout(spawnGarden, 300);
+
+        // Sau 3 giây, hiện thiệp chúc mừng
+        const tid = setTimeout(showCard, 3200);
+        gardenTimers.push(tid);
+      }
+
+      /* Gắn sự kiện click/chạm */
+      mainFlower.addEventListener('click', onFlowerTap);
+
+      /* ----------------------------------------------------------
+         TRẠNG THÁI 3: HIỆN THIỆP CHÚC MỪNG
+         ---------------------------------------------------------- */
+      function showCard() {
+        currentState = 3;
+        cardOverlay.classList.add('visible');
+      }
+
+      /* ----------------------------------------------------------
+         NÚT CHƠI LẠI: RESET VỀ TRẠNG THÁI 1
+         ---------------------------------------------------------- */
+      function replay() {
+        // Xóa hết timer đang chờ
+        gardenTimers.forEach(t => clearTimeout(t));
+        gardenTimers = [];
+
+        // Ẩn thiệp (transition CSS sẽ tự fade out)
+        cardOverlay.classList.remove('visible');
+
+        // Delay nhẹ để thiệp fade out xong
+        setTimeout(() => {
+          // Xóa toàn bộ hoa vườn
+          gardenBox.innerHTML = '';
+
+          // Khôi phục bông hoa chính
+          mainFlower.style.transition = 'transform 0.6s ease, opacity 0.6s ease';
+          mainFlower.style.transform = '';
+          mainFlower.style.opacity = '';
+          mainFlower.style.pointerEvents = '';
+
+          // Khôi phục thân cây + dòng chữ
+          stemSection.classList.remove('fade-out');
+          messageText.classList.remove('fade-out');
+
+          // Khôi phục tooltip
+          tapHint.classList.remove('fade-out');
+
+          // Khôi phục đung đưa
+          plantInner.style.animation = '';
+
+          currentState = 1;
+        }, 900);
+      }
+
+      replayBtn.addEventListener('click', replay);
+
+      /* ----------------------------------------------------------
+         TÙY CHỌN: Fallback ảnh hoa nếu file không tải được
+         ---------------------------------------------------------- */
+      mainFlower.addEventListener('error', function () {
+        // Thử file .jpg nếu .png lỗi, hoặc ngược lại
+        const src = this.src;
+        if (src.endsWith('.png')) {
+          this.src = src.replace('.png', '.jpg');
+        } else if (src.endsWith('.jpg')) {
+          // Fallback cuối: dùng emoji lớn thay ảnh
+          this.style.display = 'none';
+          const fallback = document.createElement('span');
+          fallback.textContent = '🌹';
+          fallback.style.cssText = `
+            font-size: clamp(100px, 25vmin, 220px);
+            cursor: pointer;
+            display: block;
+            filter: drop-shadow(0 0 20px rgba(255, 100, 150, 0.5));
+          `;
+          fallback.id = 'main-flower-fallback';
+          this.parentNode.insertBefore(fallback, this);
+          fallback.addEventListener('click', onFlowerTap);
+        }
+      });
+
+    })();
+  </script>
+
+</body>
+</html>
